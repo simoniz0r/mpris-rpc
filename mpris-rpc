@@ -1,0 +1,105 @@
+#!/bin/bash
+# Title: mpris-rpc
+# Author: simonizor
+# Description: A wrapper for EasyRP (https://github.com/Pizzabelly/EasyRP) that tracks MPRIS playing status
+# License: MIT
+# Dependencies: curl, playerctl
+# set EasyRP directory
+export ERP_DIR="$HOME/.local/share/mpris-rpc"
+# function to create directory and download EasyRP if does not exist
+geteasyrp() {
+    if [[ ! -d "$HOME/.local/share/mpris-rpc" || ! -f "$HOME/.local/share/mpris-rpc/easyrp" ]]; then
+        echo "EasyRP not found in '$HOME/.local/share/mpris-rpc'. Downloading now..."
+        rm -rf "$HOME"/.local/share/mpris-rpc
+        mkdir -p "$HOME"/.local/share/mpris-rpc
+        mkdir -p "$HOME"/.cache
+        curl -sL "https://github.com/Pizzabelly/EasyRP/releases/download/v3.0/EasyRP-v3.0-linux.tar.gz" -o "$HOME"/.cache/EasyRP-linux.tar.gz || \
+        echo "EasyRP download failed!" && exit 1
+        cd "$HOME"/.local/share/mpris-rpc
+        tar xzf "$HOME"/.cache/EasyRP-linux.tar.gz -C "$HOME"/.local/share/mpris-rpc || echo "Failed to extract EasyRP!" && exit 1
+        mv "$HOME"/.local/share/mpris-rpc/EasyRP-v3.0-linux/* "$HOME"/.local/share/mpris-rpc/
+        rm -rf "$HOME"/.local/share/mpris-rpc/EasyRP-v3.0-linux
+        rm -f "$HOME"/.cache/EasyRP-linux.tar.gz
+        if [[ ! -f "$HOME/.local/share/mpris-rpc/easyrp" ]]; then
+            echo "EasyRP download failed!"
+            exit 1
+        else
+            chmod +x "$HOME"/.local/share/mpris-rpc/easyrp
+        fi
+    fi
+}
+# function to check player status using playerctl and update EasyRP config
+function mprisrpcstart() {
+    while true; do
+        if [[ -f "$ERP_DIR/stoprpc" ]]; then
+            rm -f "$ERP_DIR"/stoprpc
+            break
+        fi
+        mapfile -t ERP_NOW_PLAYING < <(playerctl  metadata --ignore-player=mpv --format '{{playerName}}|{{lc(status)}}|{{artist}}|{{title}}|{{position}}|{{mpris:length}}' | tr '|' '\n')
+        if [[ "${ERP_NOW_PLAYING[1]}" == "playing" ]]; then
+            ERP_TIME_TYPE="end"
+            ERP_TIME_START=$(date +%s)
+            ERP_PLAYER_REMAINS=$((${ERP_NOW_PLAYING[5]}-${ERP_NOW_PLAYING[4]}))
+            ERP_PLAYER_REMAINS=$((ERP_PLAYER_REMAINS/1000000))
+            ERP_TIME_END=$((ERP_TIME_START+ERP_PLAYER_REMAINS))
+        else
+            ERP_TIME_TYPE="none"
+            ERP_TIME_START=""
+            ERP_TIME_END=""
+        fi
+        if [[ ! -z "${ERP_NOW_PLAYING[3]}" && "${ERP_NOW_PLAYING[3]}" != "$ERP_LAST_PLAYING" || "${ERP_NOW_PLAYING[1]}" != "$ERP_LAST_STATE" ]]; then
+cat > "$ERP_DIR"/config.ini << EOL
+[Identifiers]
+ClientID=575056170788585472
+
+[State]
+State=${ERP_NOW_PLAYING[3]}​​
+Details=${ERP_NOW_PLAYING[2]}​​
+StartTimestamp=$ERP_TIME_START
+EndTimestamp=$ERP_TIME_END
+
+[Images]
+LargeImage=playerlarge
+LargeImageTooltip=${ERP_NOW_PLAYING[0]}
+SmallImage=${ERP_NOW_PLAYING[1]}
+SmallImageTooltip=${ERP_NOW_PLAYING[1]}
+EOL
+        fi
+        ERP_LAST_PLAYING="${ERP_NOW_PLAYING[3]}"
+        ERP_LAST_STATE="${ERP_NOW_PLAYING[1]}"
+        sleep 1
+        unset ERP_NOW_PLAYING ERP_TIME_TYPE ERP_TIME_END ERP_PLAYER_REMAINS
+    done
+}
+# detect arguments
+case "$1" in
+    stop) 
+        touch "$ERP_DIR"/stoprpc
+        if [[ -f "/tmp/.mprisrpcpid8675309.conf" ]]; then
+            source /tmp/.mprisrpcpid8675309.conf
+            echo "Killing EasyRP PID $ERP_PID and exiting..."
+            kill $ERP_PID || true
+            rm -f /tmp/.mprisrpcpid8675309.conf
+        fi
+        ;;
+    *) 
+        if ! ps aux | grep '\./easyrp' | grep -vq grep; then
+            echo "Starting mpris-rpc..."
+            geteasyrp
+            mprisrpcstart & disown
+            cd "$ERP_DIR"
+            rm -f "$ERP_DIR"/nohup.out
+            LD_LINUX_LOC="$(ldd ~/.local/share/easyrp-gui/easyrp | grep 'ld-linux' | awk '{print $3}')"
+            case "$LD_LINUX_LOC" in
+                /*) $LD_LINUX_LOC ./easyrp >& ./nohup.out & disown;;
+                *) ./easyrp >& ./nohup.out & disown;;
+            esac
+            echo "ERP_PID=$!" > /tmp/.mprisrpcpid8675309.conf
+            source /tmp/.mprisrpcpid8675309.conf
+            echo "mpris-rpc started; EasyRP PID: $ERP_PID"
+        else
+            echo "EasyRP is already running:"
+            ps aux | grep '\./easyrp' | grep -v grep
+        fi
+        ;;
+esac
