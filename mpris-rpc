@@ -89,7 +89,7 @@ case "$1" in
             mprisrpcstart & disown
             cd "$ERP_DIR"
             rm -f "$ERP_DIR"/nohup.out
-            LD_LINUX_LOC="$(ldd ~/.local/share/easyrp-gui/easyrp | grep 'ld-linux' | awk '{print $3}')"
+            LD_LINUX_LOC="$(ldd ~/.local/share/mpris-rpc/easyrp | grep 'ld-linux' | awk '{print $3}')"
             case "$LD_LINUX_LOC" in
                 /*) $LD_LINUX_LOC ./easyrp >& ./nohup.out & disown;;
                 *) ./easyrp >& ./nohup.out & disown;;
