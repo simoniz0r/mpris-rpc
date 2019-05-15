@@ -14,9 +14,9 @@ geteasyrp() {
         mkdir -p "$HOME"/.local/share/mpris-rpc
         mkdir -p "$HOME"/.cache
         curl -sL "https://github.com/Pizzabelly/EasyRP/releases/download/v3.0/EasyRP-v3.0-linux.tar.gz" -o "$HOME"/.cache/EasyRP-linux.tar.gz || \
-        echo "EasyRP download failed!" && exit 1
+        { echo "EasyRP download failed!"; exit 1; }
         cd "$HOME"/.local/share/mpris-rpc
-        tar xzf "$HOME"/.cache/EasyRP-linux.tar.gz -C "$HOME"/.local/share/mpris-rpc || echo "Failed to extract EasyRP!" && exit 1
+        tar xzf "$HOME"/.cache/EasyRP-linux.tar.gz -C "$HOME"/.local/share/mpris-rpc || { echo "Failed to extract EasyRP!"; exit 1; }
         mv "$HOME"/.local/share/mpris-rpc/EasyRP-v3.0-linux/* "$HOME"/.local/share/mpris-rpc/
         rm -rf "$HOME"/.local/share/mpris-rpc/EasyRP-v3.0-linux
         rm -f "$HOME"/.cache/EasyRP-linux.tar.gz
