@@ -61,7 +61,7 @@ mpris.get_easyrp() {
 }
 # function to get player status using playerctrl
 mpris.get_status() {
-    mapfile -t ERP_NOW_PLAYING < <(playerctl  metadata --ignore-player=mpv --format '{{playerName}}|{{lc(status)}}|{{artist}}|{{title}}|{{position}}|{{mpris:length}}' | tr '|' '\n')
+    mapfile -t ERP_NOW_PLAYING < <(playerctl  metadata --format '{{playerName}}|{{lc(status)}}|{{artist}}|{{title}}|{{position}}|{{mpris:length}}' | tr '|' '\n')
     if [[ "${ERP_NOW_PLAYING[1]}" == "playing" ]]; then
         ERP_TIME_START=$(date +%s)
         ERP_PLAYER_REMAINS=$((${ERP_NOW_PLAYING[5]}-${ERP_NOW_PLAYING[4]}))

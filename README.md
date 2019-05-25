@@ -4,7 +4,7 @@ A wrapper for [EasyRP](https://github.com/Pizzabelly/EasyRP) that tracks MPRIS p
 
 # Usage
 
-**Dependencies**: curl (used for downloading EasyRP on first run), playerctl, some player that supports MPRIS (mpv currently not supported as it didn't work in my tests).
+**Dependencies**: curl (used for downloading EasyRP on first run), playerctl, some player that supports MPRIS.
 
 Just run `mpris-rpc`, and it will automatically update your Discord RPC status when a new song starts playing, the player status changes, or if the player changes.  Run `mpris-rpc stop` to stop `mpris-rpc`.
 
